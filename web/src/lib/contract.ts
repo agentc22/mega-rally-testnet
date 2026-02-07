@@ -20,6 +20,133 @@ export const MEGA_RALLY_ABI = [
   },
   {
     type: "function",
+    name: "MAX_ATTEMPTS",
+    inputs: [],
+    outputs: [{ name: "", type: "uint8" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "MAX_OBSTACLES_PER_SECOND",
+    inputs: [],
+    outputs: [{ name: "", type: "uint8" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "MAX_SCORE_PER_OBSTACLE",
+    inputs: [],
+    outputs: [{ name: "", type: "uint32" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "isOperator",
+    inputs: [
+      { name: "", type: "address" },
+      { name: "", type: "address" }
+    ],
+    outputs: [{ name: "", type: "bool" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "setOperator",
+    inputs: [
+      { name: "operator", type: "address" },
+      { name: "allowed", type: "bool" }
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "obstaclePassed",
+    inputs: [
+      { name: "roundId", type: "uint256" },
+      { name: "entryIndex_", type: "uint32" },
+      { name: "obstacleCount_", type: "uint32" },
+      { name: "deltaScore", type: "uint32" }
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "obstaclePassedFor",
+    inputs: [
+      { name: "roundId", type: "uint256" },
+      { name: "player", type: "address" },
+      { name: "entryIndex_", type: "uint32" },
+      { name: "obstacleCount_", type: "uint32" },
+      { name: "deltaScore", type: "uint32" }
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "attemptsUsed",
+    inputs: [
+      { name: "roundId", type: "uint256" },
+      { name: "player", type: "address" },
+    ],
+    outputs: [{ name: "", type: "uint8" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "currentAttemptScore",
+    inputs: [
+      { name: "roundId", type: "uint256" },
+      { name: "player", type: "address" },
+    ],
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "totalScore",
+    inputs: [
+      { name: "roundId", type: "uint256" },
+      { name: "player", type: "address" },
+    ],
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "entryIndex",
+    inputs: [
+      { name: "roundId", type: "uint256" },
+      { name: "player", type: "address" },
+    ],
+    outputs: [{ name: "", type: "uint32" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "startEntry",
+    inputs: [{ name: "roundId", type: "uint256" }],
+    outputs: [],
+    stateMutability: "payable",
+  },
+  {
+    type: "function",
+    name: "startAttempt",
+    inputs: [{ name: "roundId", type: "uint256" }],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "endAttempt",
+    inputs: [{ name: "roundId", type: "uint256" }],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
     name: "createRound",
     inputs: [
       { name: "entryFee", type: "uint256" },
@@ -110,6 +237,60 @@ export const MEGA_RALLY_ABI = [
   },
   {
     type: "event",
+    name: "EntryStarted",
+    inputs: [
+      { name: "roundId", type: "uint256", indexed: true },
+      { name: "player", type: "address", indexed: true },
+      { name: "entryIndex", type: "uint32", indexed: false },
+    ],
+  },
+  {
+    type: "event",
+    name: "AttemptStarted",
+    inputs: [
+      { name: "roundId", type: "uint256", indexed: true },
+      { name: "player", type: "address", indexed: true },
+      { name: "entryIndex", type: "uint32", indexed: false },
+      { name: "attemptNumber", type: "uint8", indexed: false },
+    ],
+  },
+  {
+    type: "event",
+    name: "AttemptEnded",
+    inputs: [
+      { name: "roundId", type: "uint256", indexed: true },
+      { name: "player", type: "address", indexed: true },
+      { name: "entryIndex", type: "uint32", indexed: false },
+      { name: "attemptsUsed", type: "uint8", indexed: false },
+      { name: "attemptScore", type: "uint256", indexed: false },
+      { name: "entryTotalScore", type: "uint256", indexed: false },
+      { name: "bestScore", type: "uint256", indexed: false },
+    ],
+  },
+  {
+    type: "event",
+    name: "OperatorSet",
+    inputs: [
+      { name: "player", type: "address", indexed: true },
+      { name: "operator", type: "address", indexed: true },
+      { name: "allowed", type: "bool", indexed: false },
+    ],
+  },
+  {
+    type: "event",
+    name: "ObstaclePassed",
+    inputs: [
+      { name: "roundId", type: "uint256", indexed: true },
+      { name: "player", type: "address", indexed: true },
+      { name: "entryIndex", type: "uint32", indexed: true },
+      { name: "obstacleCount", type: "uint32", indexed: false },
+      { name: "deltaScore", type: "uint32", indexed: false },
+      { name: "attemptScore", type: "uint256", indexed: false },
+      { name: "bestScore", type: "uint256", indexed: false },
+    ],
+  },
+  {
+    type: "event",
     name: "ActionsSubmitted",
     inputs: [
       { name: "roundId", type: "uint256", indexed: true },
@@ -161,4 +342,4 @@ export const MEGA_RALLY_ABI = [
 // After deploying with `forge script`, paste the address here
 export const MEGA_RALLY_ADDRESS =
   (process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`) ||
-  "0x5FbDB2315678afecb367f032d93F642f64180aa3"; // default anvil deploy address
+  "0x1E5a45532a3C5fA56342A7CeFdd42f6eB4F5E6aD"; // default anvil deploy address

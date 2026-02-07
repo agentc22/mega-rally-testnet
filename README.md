@@ -2,10 +2,12 @@
 
 Fluffle Dash v2: a mobile-first, Flappy-Bird-ish on-chain rally game.
 
-- Players join a timed round.
-- You **dash** in a canvas runner (tap anywhere to flap).
+- Players start one or more paid **entries** within a timed round.
+- Each entry gives you up to **3 attempts**.
+- You **dash** in a canvas runner.
 - Your **distance** is your score.
-- When the round ends, the top distance wins the pool (minus a 2% fee).
+- Leaderboard uses your **best entry**.
+- When the round ends, the top score wins the pool (minus a 2% fee).
 
 ## Architecture
 
@@ -76,7 +78,8 @@ Contract behavior:
 | Function | Description |
 |---|---|
 | `createRound(entryFee, duration)` | Create a new timed round |
-| `joinRound(roundId)` | Join with entry fee (payable) |
+| `startEntry(roundId)` | Start a new paid entry (payable, per entry) |
+| `joinRound(roundId)` | Back-compat alias for `startEntry` |
 | `submitActions(roundId, amount)` | Batch-submit distance/actions (recommended) |
 | `submitAction(roundId)` | Legacy single action (calls `submitActions(roundId, 1)`) |
 | `finalizeRound(roundId)` | After round ends — pays winner 98%, feeReceiver 2% |
