@@ -1,5 +1,5 @@
 /** @type {import('next').NextConfig} */
-const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '/mega-rally-testnet';
 
 const nextConfig = {
   reactStrictMode: true,
@@ -7,7 +7,6 @@ const nextConfig = {
   images: { unoptimized: true },
   basePath,
   assetPrefix: basePath,
-  // Prevent Next from walking up to a different lockfile/workspace root.
   outputFileTracingRoot: __dirname,
 };
 
