@@ -95,3 +95,6 @@ Contract behavior:
 ## License
 
 MIT
+
+
+Deployed testnet build via GitHub Pages (Actions).
