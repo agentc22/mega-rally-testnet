@@ -1,0 +1,292 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --bg: #0a0a0a;
+  --fg: #ededed;
+  --accent: #ff4d4d;
+  --accent-hover: #ff6b6b;
+  --card: #1a1a1a;
+  --border: #333;
+  --muted: #888;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+  min-height: 100dvh;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  font-family: inherit;
+}
+
+.container {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 20px;
+}
+
+.header h1 {
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.connect-btn {
+  background: var(--accent);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.connect-btn:hover {
+  background: var(--accent-hover);
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.card h2 {
+  font-size: 1.1rem;
+  margin-bottom: 8px;
+}
+
+.card p {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin-bottom: 4px;
+}
+
+.action-btn {
+  width: 100%;
+  padding: 12px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  background: var(--accent);
+  color: white;
+  border-radius: 10px;
+  margin-top: 8px;
+}
+
+.action-btn:hover {
+  background: var(--accent-hover);
+}
+
+.action-btn:disabled {
+  opacity: 0.5;
+}
+
+.leaderboard {
+  list-style: none;
+}
+
+.leaderboard li {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.9rem;
+}
+
+.leaderboard li:last-child {
+  border-bottom: none;
+}
+
+.rank {
+  color: var(--muted);
+  min-width: 24px;
+}
+
+.addr {
+  font-family: monospace;
+  font-size: 0.8rem;
+  flex: 1;
+  text-align: left;
+  margin-left: 8px;
+}
+
+.score {
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.status {
+  text-align: center;
+  padding: 8px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.round-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.badge-active {
+  background: #1a3a1a;
+  color: #4ade80;
+}
+
+.badge-ended {
+  background: #3a1a1a;
+  color: #f87171;
+}
+
+.no-round {
+  text-align: center;
+  padding: 40px 16px;
+  color: var(--muted);
+}
+
+/* Fluffle Dash */
+.dash-wrap {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: #0b1220;
+  height: 56vh;
+  min-height: 360px;
+  max-height: 520px;
+}
+
+.dash-root {
+  width: 100%;
+  height: 100%;
+  /* Avoid page scroll/zoom hijacking tap controls on mobile. */
+  touch-action: none;
+}
+
+.dash-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.dash-hud {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.dash-hud-label {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  opacity: 0.75;
+}
+
+.dash-hud-value {
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.dash-standings {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  background: rgba(0, 0, 0, 0.4);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+}
+
+.dash-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.dash-overlay-inner {
+  width: 100%;
+  max-width: 320px;
+  background: rgba(26, 26, 26, 0.95);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px;
+}
+
+/* Standings drawer */
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  z-index: 50;
+}
+
+.drawer {
+  width: 100%;
+  max-width: 480px;
+  background: var(--card);
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+  border: 1px solid var(--border);
+  padding: 14px 16px 18px;
+  max-height: 70vh;
+  overflow: auto;
+}
+
+.drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.drawer-header h3 {
+  font-size: 1.05rem;
+}
+
+.drawer-close {
+  background: rgba(255, 255, 255, 0.08);
+  color: white;
+  padding: 8px 10px;
+  border-radius: 10px;
+}

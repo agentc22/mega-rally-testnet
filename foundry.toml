@@ -1,0 +1,11 @@
+[profile.default]
+src = "src"
+out = "out"
+libs = ["lib"]
+
+# MegaETH testnet appears to have limited opcode/EVM support.
+# Compile with an older solc and target a pre-Shanghai EVM for compatibility.
+solc_version = "0.8.20"
+evm_version = "london"
+
+# See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
