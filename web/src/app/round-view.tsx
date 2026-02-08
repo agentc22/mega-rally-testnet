@@ -680,6 +680,26 @@ export function RoundView({ address, demo }: { address: Address; demo?: boolean 
     }
   }, [chainId, switchChainAsync]);
 
+  const attemptNum = Math.min(MAX_ATTEMPTS, attemptsUsedUI + 1);
+
+  // Deterministic, transparent per-entry seed base:
+  // - same tournament/round shares the rules/curve
+  // - obstacle patterns vary per entry (prevents memorization/grind advantage)
+  // - same entryIndex => deterministic spawn
+  // Important: this must run on every render (no conditional hooks).
+  const entrySeedBase = useMemo(() => {
+    const rid = roundId?.toString() ?? "0";
+    const who = (address ?? ("0x0000000000000000000000000000000000000000" as Address)).toLowerCase();
+    const entry = String(entryIndexUI);
+    return `${chainId}:${MEGA_RALLY_ADDRESS}:${rid}:${who}:${entry}`;
+  }, [chainId, roundId, address, entryIndexUI]);
+
+  const onDashFeedback = useCallback((f: DashFeedback) => {
+    setDashFeedback(f);
+    if (feedbackTimerRef.current) window.clearTimeout(feedbackTimerRef.current);
+    feedbackTimerRef.current = window.setTimeout(() => setDashFeedback(null), f === "perfect" ? 420 : 520);
+  }, []);
+
   // Hard gate: prevent any onchain actions unless we're on MegaETH testnet.
   // This avoids accidental mainnet tx prompts.
   if (!isDemo && chainId !== MEGAETH_CARROT_CHAIN_ID) {
@@ -696,8 +716,8 @@ export function RoundView({ address, demo }: { address: Address; demo?: boolean 
     );
   }
 
-  // Demo UX: don't show the "No rounds yet" / "Create Round" screen.
-  // The demo round is seeded on mount; show a lightweight "starting" state until then.
+  // Demo UX: don't show the No rounds yet / Create Round screen.
+  // The demo round is seeded on mount; show a lightweight starting state until then.
   if (isDemo && roundId === null) {
     return (
       <div className="no-round">
@@ -721,25 +741,6 @@ export function RoundView({ address, demo }: { address: Address; demo?: boolean 
       </div>
     );
   }
-
-  const attemptNum = Math.min(MAX_ATTEMPTS, attemptsUsedUI + 1);
-
-  // Deterministic, transparent per-entry seed base:
-  // - same tournament/round shares the *rules/curve*
-  // - obstacle patterns vary per entry (prevents memorization/grind advantage)
-  // - same entryIndex => deterministic spawn (attemptNumber 1..3 changes within the same entry)
-  const entrySeedBase = useMemo(() => {
-    const rid = roundId?.toString() ?? "0";
-    const who = (address ?? ("0x0000000000000000000000000000000000000000" as Address)).toLowerCase();
-    const entry = String(entryIndexUI);
-    return `${chainId}:${MEGA_RALLY_ADDRESS}:${rid}:${who}:${entry}`;
-  }, [chainId, roundId, address, entryIndexUI]);
-
-  const onDashFeedback = useCallback((f: DashFeedback) => {
-    setDashFeedback(f);
-    if (feedbackTimerRef.current) window.clearTimeout(feedbackTimerRef.current);
-    feedbackTimerRef.current = window.setTimeout(() => setDashFeedback(null), f === "perfect" ? 420 : 520);
-  }, []);
 
   // NOTE: we intentionally keep this as a *number* while animating.
   // Converting to BigInt at the end keeps the HUD stable and avoids
