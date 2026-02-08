@@ -293,15 +293,18 @@ export function FluffleDash({
       spritesRef.current[key] = img;
     };
 
-    // Resolve relative to the versioned build directory (/v/<id>/)
-    const u = (p: string) => new URL(p, window.location.href).toString();
-    load("fluffle_run1", u("./sprites/fluffle_run1.svg"));
-    load("fluffle_run2", u("./sprites/fluffle_run2.svg"));
-    load("fluffle_slide", u("./sprites/fluffle_slide.svg"));
-    load("ob_shard", u("./sprites/obstacle_shard.svg"));
-    load("ob_drone", u("./sprites/obstacle_drone.svg"));
-    load("ob_pylon", u("./sprites/obstacle_pylon.svg"));
-    load("ob_tree", u("./sprites/obstacle_tree.svg"));
+    // Prefer the statically-injected base path (GitHub Pages serves under /mega-rally-testnet/v/<id>/)
+    // so sprite URLs work from any route.
+    const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+    const u = (p: string) => new URL(`${basePath}${p}`, window.location.origin).toString();
+
+    load("fluffle_run1", u("/sprites/fluffle_run1.svg"));
+    load("fluffle_run2", u("/sprites/fluffle_run2.svg"));
+    load("fluffle_slide", u("/sprites/fluffle_slide.svg"));
+    load("ob_shard", u("/sprites/obstacle_shard.svg"));
+    load("ob_drone", u("/sprites/obstacle_drone.svg"));
+    load("ob_pylon", u("/sprites/obstacle_pylon.svg"));
+    load("ob_tree", u("/sprites/obstacle_tree.svg"));
   }, []);
 
   useEffect(() => {

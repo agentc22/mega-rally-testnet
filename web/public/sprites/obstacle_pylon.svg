@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="96" height="192" viewBox="0 0 96 192">
+  <defs>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="2.5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- base -->
+  <rect x="18" y="160" width="60" height="18" rx="8" fill="rgba(0,0,0,0.55)" stroke="rgba(34,211,238,0.25)" stroke-width="3"/>
+
+  <!-- pole -->
+  <rect x="34" y="26" width="28" height="140" rx="10" fill="#2A2F3A" stroke="rgba(0,0,0,0.6)" stroke-width="4"/>
+
+  <!-- warning stripes -->
+  <rect x="36" y="64" width="24" height="14" fill="#FFB000"/>
+  <rect x="36" y="86" width="24" height="14" fill="#141A26"/>
+  <rect x="36" y="108" width="24" height="14" fill="#FFB000"/>
+
+  <!-- top beacon -->
+  <circle cx="48" cy="22" r="12" fill="#00E5FF" fill-opacity="0.9" filter="url(#glow)"/>
+  <circle cx="48" cy="22" r="5" fill="#FF2FD6" fill-opacity="0.7"/>
+
+  <!-- side antenna -->
+  <path d="M16 52 H34" stroke="rgba(34,211,238,0.65)" stroke-width="6" stroke-linecap="round" filter="url(#glow)"/>
+  <path d="M62 52 H80" stroke="rgba(34,211,238,0.65)" stroke-width="6" stroke-linecap="round" filter="url(#glow)"/>
+</svg>

@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="240" viewBox="0 0 160 240">
+  <defs>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="2.2" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- trunk (circuit bonsai) -->
+  <path d="M82 226 C74 194 92 176 78 146 C62 114 96 96 82 62"
+        fill="none" stroke="#2A2F3A" stroke-width="16" stroke-linecap="round"/>
+  <path d="M80 150 C58 140 54 120 40 104" fill="none" stroke="#2A2F3A" stroke-width="10" stroke-linecap="round"/>
+  <path d="M80 132 C104 124 116 104 128 92" fill="none" stroke="#2A2F3A" stroke-width="10" stroke-linecap="round"/>
+
+  <!-- neon nodes/leaves -->
+  <circle cx="38" cy="100" r="14" fill="#00E5FF" fill-opacity="0.85" filter="url(#glow)"/>
+  <circle cx="130" cy="88" r="14" fill="#FF2FD6" fill-opacity="0.75" filter="url(#glow)"/>
+  <circle cx="82" cy="54" r="16" fill="#A6FF00" fill-opacity="0.70" filter="url(#glow)"/>
+
+  <!-- small nodes -->
+  <circle cx="70" cy="170" r="4" fill="rgba(154,166,178,0.85)"/>
+  <circle cx="96" cy="154" r="4" fill="rgba(154,166,178,0.85)"/>
+  <circle cx="62" cy="128" r="3" fill="rgba(154,166,178,0.7)"/>
+</svg>
