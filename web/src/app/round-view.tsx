@@ -9,7 +9,7 @@ import {
   useWatchContractEvent,
   useWriteContract,
 } from "wagmi";
-import { formatEther, parseEther, type Address } from "viem";
+import { formatEther, parseEther, UserRejectedRequestError, type Address } from "viem";
 import { MEGA_RALLY_ABI, MEGA_RALLY_ADDRESS } from "@/lib/contract";
 import { ensureMegaethCarrotChain, MEGAETH_CARROT_CHAIN_ID } from "@/lib/megaeth-network";
 import { FluffleDash, type DashFeedback } from "./fluffle-dash";
@@ -30,6 +30,11 @@ export function RoundView({ address, demo }: { address: Address; demo?: boolean 
   const [_timeLeft, _setTimeLeft] = useState(0);
   const [myScore, setMyScore] = useState(0n);
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // transient UI status for tx flows (esp. user rejection)
+  const [uiStatus, setUiStatus] = useState<string | null>(null);
+  const uiStatusTimerRef = useRef<number | null>(null);
+  const mountedRef = useRef(true);
 
   // simple mobile sanity check: button tap should cause immediate state change
   const [tapCount, setTapCount] = useState(0);
@@ -58,6 +63,25 @@ export function RoundView({ address, demo }: { address: Address; demo?: boolean 
       if (feedbackTimerRef.current) window.clearTimeout(feedbackTimerRef.current);
       feedbackTimerRef.current = null;
     };
+  }, []);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      if (uiStatusTimerRef.current) window.clearTimeout(uiStatusTimerRef.current);
+      uiStatusTimerRef.current = null;
+    };
+  }, []);
+
+  const flashStatus = useCallback((msg: string, ms = 2500) => {
+    if (!mountedRef.current) return;
+    setUiStatus(msg);
+    if (uiStatusTimerRef.current) window.clearTimeout(uiStatusTimerRef.current);
+    uiStatusTimerRef.current = window.setTimeout(() => {
+      if (!mountedRef.current) return;
+      setUiStatus(null);
+    }, ms);
   }, []);
 
   const publicClient = usePublicClient();
@@ -561,12 +585,25 @@ export function RoundView({ address, demo }: { address: Address; demo?: boolean 
       return;
     }
 
-    await writeContractAsync({
-      address: MEGA_RALLY_ADDRESS,
-      abi: MEGA_RALLY_ABI,
-      functionName: "createRound",
-      args: [parseEther("0.01"), 120n],
-    });
+    try {
+      await writeContractAsync({
+        address: MEGA_RALLY_ADDRESS,
+        abi: MEGA_RALLY_ABI,
+        functionName: "createRound",
+        args: [parseEther("0.01"), 120n],
+      });
+    } catch (err) {
+      if (err instanceof UserRejectedRequestError || (err as any)?.name === "UserRejectedRequestError") {
+        flashStatus("Transaction rejected.");
+        return;
+      }
+      // eslint-disable-next-line no-console
+      console.error("[MegaRally] createRound failed", err);
+      flashStatus("Create round failed.");
+      return;
+    }
+
+    if (!mountedRef.current) return;
     await refetchNextId();
   }
 
@@ -587,13 +624,25 @@ export function RoundView({ address, demo }: { address: Address; demo?: boolean 
 
     // writeContractAsync resolves as soon as the tx is submitted. If we refetch immediately,
     // RPC can still serve the pre-tx state → UI stays stuck on "Join Round".
-    const hash = await writeContractAsync({
-      address: MEGA_RALLY_ADDRESS,
-      abi: MEGA_RALLY_ABI,
-      functionName: "startEntry",
-      args: [roundId],
-      value: entryFee,
-    });
+    let hash: `0x${string}`;
+    try {
+      hash = await writeContractAsync({
+        address: MEGA_RALLY_ADDRESS,
+        abi: MEGA_RALLY_ABI,
+        functionName: "startEntry",
+        args: [roundId],
+        value: entryFee,
+      });
+    } catch (err) {
+      if (err instanceof UserRejectedRequestError || (err as any)?.name === "UserRejectedRequestError") {
+        flashStatus("Transaction rejected.");
+        return;
+      }
+      // eslint-disable-next-line no-console
+      console.error("[MegaRally] startEntry failed", err);
+      flashStatus("Join failed.");
+      return;
+    }
 
     try {
       if (publicClient) await publicClient.waitForTransactionReceipt({ hash });
@@ -643,13 +692,25 @@ export function RoundView({ address, demo }: { address: Address; demo?: boolean 
     }
 
     if (roundId === null || entryFee === undefined) return;
-    const hash = await writeContractAsync({
-      address: MEGA_RALLY_ADDRESS,
-      abi: MEGA_RALLY_ABI,
-      functionName: "startEntry",
-      args: [roundId],
-      value: entryFee,
-    });
+    let hash: `0x${string}`;
+    try {
+      hash = await writeContractAsync({
+        address: MEGA_RALLY_ADDRESS,
+        abi: MEGA_RALLY_ABI,
+        functionName: "startEntry",
+        args: [roundId],
+        value: entryFee,
+      });
+    } catch (err) {
+      if (err instanceof UserRejectedRequestError || (err as any)?.name === "UserRejectedRequestError") {
+        flashStatus("Transaction rejected.");
+        return;
+      }
+      // eslint-disable-next-line no-console
+      console.error("[MegaRally] startEntry (new entry) failed", err);
+      flashStatus("New entry failed.");
+      return;
+    }
 
     try {
       if (publicClient) await publicClient.waitForTransactionReceipt({ hash });
@@ -673,12 +734,24 @@ export function RoundView({ address, demo }: { address: Address; demo?: boolean 
     }
 
     if (roundId === null) return;
-    await writeContractAsync({
-      address: MEGA_RALLY_ADDRESS,
-      abi: MEGA_RALLY_ABI,
-      functionName: "finalizeRound",
-      args: [roundId],
-    });
+    try {
+      await writeContractAsync({
+        address: MEGA_RALLY_ADDRESS,
+        abi: MEGA_RALLY_ABI,
+        functionName: "finalizeRound",
+        args: [roundId],
+      });
+    } catch (err) {
+      if (err instanceof UserRejectedRequestError || (err as any)?.name === "UserRejectedRequestError") {
+        flashStatus("Transaction rejected.");
+        return;
+      }
+      // eslint-disable-next-line no-console
+      console.error("[MegaRally] finalizeRound failed", err);
+      flashStatus("Finalize failed.");
+      return;
+    }
+    if (!mountedRef.current) return;
     await refetchRound();
     fetchLeaderboard();
   }
@@ -760,6 +833,11 @@ export function RoundView({ address, demo }: { address: Address; demo?: boolean 
         <div style={{ textAlign: "center", marginTop: 8, fontSize: 12, opacity: 0.7 }} aria-live="polite">
           Tap count: {tapCount}
         </div>
+        {uiStatus && (
+          <div style={{ textAlign: "center", marginTop: 8, fontSize: 12, opacity: 0.9 }} aria-live="polite">
+            {uiStatus}
+          </div>
+        )}
       </div>
     );
   }
@@ -789,6 +867,12 @@ export function RoundView({ address, demo }: { address: Address; demo?: boolean 
           </div>
         )}
       </div>
+
+      {uiStatus && (
+        <div style={{ textAlign: "center", marginTop: 10, fontSize: 12, opacity: 0.9 }} aria-live="polite">
+          {uiStatus}
+        </div>
+      )}
 
       {/* Game + HUD */}
       {isActive && (
