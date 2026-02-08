@@ -582,13 +582,23 @@ export function RoundView({ address, demo }: { address: Address; demo?: boolean 
     }
 
     if (roundId === null || entryFee === undefined) return;
-    await writeContractAsync({
+
+    // writeContractAsync resolves as soon as the tx is submitted. If we refetch immediately,
+    // RPC can still serve the pre-tx state → UI stays stuck on "Join Round".
+    const hash = await writeContractAsync({
       address: MEGA_RALLY_ADDRESS,
       abi: MEGA_RALLY_ABI,
       functionName: "startEntry",
       args: [roundId],
       value: entryFee,
     });
+
+    try {
+      if (publicClient) await publicClient.waitForTransactionReceipt({ hash });
+    } catch {
+      // ignore; we'll still attempt to refetch (some wallets/rpcs can be flaky)
+    }
+
     await refetchJoined();
     await refetchRound();
     void refetchEntryIndex();
@@ -596,12 +606,17 @@ export function RoundView({ address, demo }: { address: Address; demo?: boolean 
     // optional: pre-open attempt so a crash before first commit can still be ended
     if (isActive) {
       try {
-        await writeContractAsync({
+        const attemptHash = await writeContractAsync({
           address: MEGA_RALLY_ADDRESS,
           abi: MEGA_RALLY_ABI,
           functionName: "startAttempt",
           args: [roundId],
         });
+        try {
+          if (publicClient) await publicClient.waitForTransactionReceipt({ hash: attemptHash });
+        } catch {
+          // ignore
+        }
       } catch {
         // ignore (attempt may already be active / inferred)
       }
@@ -627,13 +642,19 @@ export function RoundView({ address, demo }: { address: Address; demo?: boolean 
     }
 
     if (roundId === null || entryFee === undefined) return;
-    await writeContractAsync({
+    const hash = await writeContractAsync({
       address: MEGA_RALLY_ADDRESS,
       abi: MEGA_RALLY_ABI,
       functionName: "startEntry",
       args: [roundId],
       value: entryFee,
     });
+
+    try {
+      if (publicClient) await publicClient.waitForTransactionReceipt({ hash });
+    } catch {
+      // ignore
+    }
 
     void refetchEntryIndex();
     void refetchAttemptsUsed();
