@@ -91,6 +91,36 @@ export function RoundView({ address, demo }: { address: Address; demo?: boolean 
 
   const onCorrectChain = isDemo || chainId === MEGAETH_CARROT_CHAIN_ID;
 
+  type ContractMode = "unknown" | "entries" | "legacy";
+  const [contractMode, setContractMode] = useState<ContractMode>("unknown");
+
+  // Runtime probe: detect whether the deployed contract supports the new entries/retries model.
+  // We look for the PUSH4 selector for startEntry(uint256): 0xdf49cf07 => "63df49cf07" in bytecode.
+  useEffect(() => {
+    if (isDemo) {
+      setContractMode("entries");
+      return;
+    }
+    if (!onCorrectChain) return;
+    if (!publicClient) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const code = await publicClient.getBytecode({ address: MEGA_RALLY_ADDRESS });
+        const hex = (code ?? "0x").toLowerCase();
+        const hasStartEntry = hex.includes("63df49cf07");
+        if (!cancelled) setContractMode(hasStartEntry ? "entries" : "legacy");
+      } catch {
+        if (!cancelled) setContractMode("legacy");
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isDemo, onCorrectChain, publicClient]);
+
   // ---------------- Demo state ----------------
   const [demoJoined, setDemoJoined] = useState(false);
   const [demoRoundEndsAt, setDemoRoundEndsAt] = useState<number | null>(null);
@@ -182,12 +212,12 @@ export function RoundView({ address, demo }: { address: Address; demo?: boolean 
     query: { enabled: !isDemo && onCorrectChain && roundId !== null },
   });
 
-  const { data: hasJoined } = useReadContract({
+  const { data: hasJoined, refetch: refetchHasJoined } = useReadContract({
     address: MEGA_RALLY_ADDRESS,
     abi: MEGA_RALLY_ABI,
     functionName: "joined",
     args: roundId !== null ? [roundId, address] : undefined,
-    query: { enabled: !isDemo && onCorrectChain && roundId !== null },
+    query: { enabled: !isDemo && onCorrectChain && contractMode === "legacy" && roundId !== null },
   });
 
   const { data: entryIndexOnchain, refetch: refetchEntryIndex } = useReadContract({
@@ -195,7 +225,7 @@ export function RoundView({ address, demo }: { address: Address; demo?: boolean 
     abi: MEGA_RALLY_ABI,
     functionName: "entryIndex",
     args: roundId !== null ? [roundId, address] : undefined,
-    query: { enabled: !isDemo && onCorrectChain && roundId !== null },
+    query: { enabled: !isDemo && onCorrectChain && contractMode === "entries" && roundId !== null },
   });
 
   const { data: attemptsUsedOnchain, refetch: refetchAttemptsUsed } = useReadContract({
@@ -203,7 +233,7 @@ export function RoundView({ address, demo }: { address: Address; demo?: boolean 
     abi: MEGA_RALLY_ABI,
     functionName: "attemptsUsed",
     args: roundId !== null ? [roundId, address] : undefined,
-    query: { enabled: !isDemo && onCorrectChain && roundId !== null },
+    query: { enabled: !isDemo && onCorrectChain && contractMode === "entries" && roundId !== null },
   });
 
   const { data: currentAttemptScoreOnchain, refetch: refetchAttemptScore } = useReadContract({
@@ -211,7 +241,7 @@ export function RoundView({ address, demo }: { address: Address; demo?: boolean 
     abi: MEGA_RALLY_ABI,
     functionName: "currentAttemptScore",
     args: roundId !== null ? [roundId, address] : undefined,
-    query: { enabled: !isDemo && onCorrectChain && roundId !== null },
+    query: { enabled: !isDemo && onCorrectChain && contractMode === "entries" && roundId !== null },
   });
 
   const { data: totalScoreOnchain, refetch: refetchTotalScore } = useReadContract({
@@ -219,7 +249,7 @@ export function RoundView({ address, demo }: { address: Address; demo?: boolean 
     abi: MEGA_RALLY_ABI,
     functionName: "totalScore",
     args: roundId !== null ? [roundId, address] : undefined,
-    query: { enabled: !isDemo && onCorrectChain && roundId !== null },
+    query: { enabled: !isDemo && onCorrectChain && contractMode === "entries" && roundId !== null },
   });
 
   const [creator, entryFee, startTime, endTime, pool, finalized, playerCount] =
@@ -231,9 +261,14 @@ export function RoundView({ address, demo }: { address: Address; demo?: boolean 
   const effectiveEntryFee = isDemo ? parseEther(demoEntryFee.toString()) : (entryFee ?? 0n);
   const effectivePool = isDemo ? parseEther(demoPool.toString()) : (pool ?? 0n);
   const effectivePlayerCount = isDemo ? BigInt(demoPlayers.length) : (playerCount ?? 0n);
-  // "joined" was the old model. New retries model uses startEntry() and entryIndex(roundId, player).
-  // Treat entryIndex > 0 as joined.
-  const effectiveHasJoined = isDemo ? demoJoined : ((entryIndexOnchain ?? 0) > 0);
+  // Legacy contract uses joined(roundId, player). New entries/retries contract uses entryIndex(roundId, player).
+  const effectiveHasJoined = isDemo
+    ? demoJoined
+    : contractMode === "entries"
+      ? (Number(entryIndexOnchain ?? 0) > 0)
+      : contractMode === "legacy"
+        ? !!hasJoined
+        : false;
 
   const now = BigInt(Math.floor(Date.now() / 1000));
   const isActive = effectiveEndTime > 0n && now < effectiveEndTime && !effectiveFinalized;
@@ -253,10 +288,17 @@ export function RoundView({ address, demo }: { address: Address; demo?: boolean 
       setAttemptScoreUI(demoAttemptScore);
       setTotalScoreUI(demoTotalLocked + demoAttemptScore);
     } else {
-      setEntryIndexUI(Number(entryIndexOnchain ?? 0));
-      setAttemptsUsedUI(Number(attemptsUsedOnchain ?? 0));
-      setAttemptScoreUI((currentAttemptScoreOnchain ?? 0n) as bigint);
-      setTotalScoreUI((totalScoreOnchain ?? 0n) as bigint);
+      if (contractMode === "legacy") {
+        setEntryIndexUI(hasJoined ? 1 : 0);
+        setAttemptsUsedUI(0);
+        setAttemptScoreUI(0n);
+        setTotalScoreUI(0n);
+      } else {
+        setEntryIndexUI(Number(entryIndexOnchain ?? 0));
+        setAttemptsUsedUI(Number(attemptsUsedOnchain ?? 0));
+        setAttemptScoreUI((currentAttemptScoreOnchain ?? 0n) as bigint);
+        setTotalScoreUI((totalScoreOnchain ?? 0n) as bigint);
+      }
     }
   }, [
     isActive,
@@ -265,6 +307,8 @@ export function RoundView({ address, demo }: { address: Address; demo?: boolean 
     demoAttemptsUsed,
     demoAttemptScore,
     demoTotalLocked,
+    contractMode,
+    hasJoined,
     entryIndexOnchain,
     attemptsUsedOnchain,
     currentAttemptScoreOnchain,
@@ -620,6 +664,11 @@ export function RoundView({ address, demo }: { address: Address; demo?: boolean 
       return;
     }
 
+    if (contractMode === "unknown") {
+      flashStatus("Detecting contract version…");
+      return;
+    }
+
     if (roundId === null || entryFee === undefined) return;
 
     // writeContractAsync resolves as soon as the tx is submitted. If we refetch immediately,
@@ -629,7 +678,7 @@ export function RoundView({ address, demo }: { address: Address; demo?: boolean 
       hash = await writeContractAsync({
         address: MEGA_RALLY_ADDRESS,
         abi: MEGA_RALLY_ABI,
-        functionName: "startEntry",
+        functionName: contractMode === "entries" ? "startEntry" : "joinRound",
         args: [roundId],
         value: entryFee,
       });
@@ -639,7 +688,7 @@ export function RoundView({ address, demo }: { address: Address; demo?: boolean 
         return;
       }
       // eslint-disable-next-line no-console
-      console.error("[MegaRally] startEntry failed", err);
+      console.error("[MegaRally] join failed", err);
       flashStatus("Join failed.");
       return;
     }
@@ -651,10 +700,11 @@ export function RoundView({ address, demo }: { address: Address; demo?: boolean 
     }
 
     await refetchRound();
-    await refetchEntryIndex();
+    if (contractMode === "entries") await refetchEntryIndex();
+    if (contractMode === "legacy") await refetchHasJoined();
 
     // optional: pre-open attempt so a crash before first commit can still be ended
-    if (isActive) {
+    if (isActive && contractMode === "entries") {
       try {
         const attemptHash = await writeContractAsync({
           address: MEGA_RALLY_ADDRESS,
@@ -670,11 +720,12 @@ export function RoundView({ address, demo }: { address: Address; demo?: boolean 
       } catch {
         // ignore (attempt may already be active / inferred)
       }
+
+      void refetchAttemptsUsed();
+      void refetchAttemptScore();
+      void refetchTotalScore();
     }
 
-    void refetchAttemptsUsed();
-    void refetchAttemptScore();
-    void refetchTotalScore();
     fetchLeaderboard();
   }
 
@@ -690,6 +741,8 @@ export function RoundView({ address, demo }: { address: Address; demo?: boolean 
       setAttemptOver(false);
       return;
     }
+
+    if (contractMode !== "entries") return;
 
     if (roundId === null || entryFee === undefined) return;
     let hash: `0x${string}`;
@@ -855,9 +908,20 @@ export function RoundView({ address, demo }: { address: Address; demo?: boolean 
       <div className="card">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <h2>Round #{roundId.toString()}</h2>
-          <span className={`badge ${isActive ? "badge-active" : "badge-ended"}`}>
-            {effectiveFinalized ? "Finalized" : isActive ? "Active" : "Ended"}
-          </span>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            {process.env.NODE_ENV !== "production" && !isDemo && (
+              <span
+                className="badge"
+                style={{ fontSize: 11, opacity: 0.85, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.14)" }}
+                title="Detected by bytecode probe (startEntry selector)"
+              >
+                mode:{contractMode}
+              </span>
+            )}
+            <span className={`badge ${isActive ? "badge-active" : "badge-ended"}`}>
+              {effectiveFinalized ? "Finalized" : isActive ? "Active" : "Ended"}
+            </span>
+          </div>
         </div>
         {!isDemo && (
           <div className="round-info" style={{ marginTop: 8 }}>
@@ -929,8 +993,17 @@ export function RoundView({ address, demo }: { address: Address; demo?: boolean 
             <div className="dash-overlay">
               <div className="dash-overlay-inner">
                 <p style={{ marginBottom: 10, opacity: 0.9 }}>Join to start dashing.</p>
-                <button className="action-btn" onClick={handleJoin} disabled={isPending}>
-                  {isPending ? "Joining..." : isDemo ? "Join Round (demo)" : `Join Round (${formatEther(effectiveEntryFee)} ETH)`}
+                <button
+                  className="action-btn"
+                  onClick={handleJoin}
+                  disabled={isPending || (!isDemo && contractMode === "unknown")}
+                  title={!isDemo && contractMode === "unknown" ? "Detecting contract version…" : undefined}
+                >
+                  {isPending
+                    ? "Joining..."
+                    : isDemo
+                      ? "Join Round (demo)"
+                      : `Join Round (${formatEther(effectiveEntryFee)} ETH)`}
                 </button>
               </div>
             </div>
@@ -943,12 +1016,25 @@ export function RoundView({ address, demo }: { address: Address; demo?: boolean 
                 <p style={{ marginBottom: 12, opacity: 0.75, fontSize: 13 }}>
                   Leaderboard keeps your best entry. Start a new entry to retry with a new seed.
                 </p>
-                <button className="action-btn" onClick={handleNewEntry} disabled={isPending}>
+                <button
+                  className="action-btn"
+                  onClick={handleNewEntry}
+                  disabled={isPending || (!isDemo && contractMode !== "entries")}
+                  title={
+                    !isDemo && contractMode === "legacy"
+                      ? "This contract version doesn't support paid retries."
+                      : !isDemo && contractMode === "unknown"
+                        ? "Detecting contract version…"
+                        : undefined
+                  }
+                >
                   {isPending
                     ? "Starting..."
                     : isDemo
                       ? "Start New Entry (demo)"
-                      : `Start New Entry (${formatEther(effectiveEntryFee)} ETH)`}
+                      : contractMode === "legacy"
+                        ? "Start New Entry (unsupported)"
+                        : `Start New Entry (${formatEther(effectiveEntryFee)} ETH)`}
                 </button>
               </div>
             </div>
