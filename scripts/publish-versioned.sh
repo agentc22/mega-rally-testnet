@@ -48,19 +48,17 @@ cat > docs/404.html <<EOT
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>MegaRally Testnet</title>
-    <meta http-equiv="refresh" content="0; url=./v/$BUILD_ID/" />
-    <script>
-      (function () {
-        var target = './v/$BUILD_ID/';
-        var suffix = (window.location.search || '') + (window.location.hash || '');
-        window.location.replace(target + suffix);
-      })();
-    </script>
+    <title>404 — MegaRally Testnet</title>
+    <!-- NOTE: Do NOT redirect 404s on GitHub Pages.
+         GitHub serves this file for missing JS/CSS chunks as well.
+         Redirecting would return HTML where JS is expected, causing parse errors
+         and can manifest as an infinite refresh/reload loop in Next.js. -->
+    <meta name="robots" content="noindex" />
   </head>
   <body>
-    <p>Redirecting…</p>
-    <p><a href="./v/$BUILD_ID/">Open testnet</a></p>
+    <h1>404</h1>
+    <p>Not found.</p>
+    <p><a href="./v/$BUILD_ID/">Open latest build</a></p>
   </body>
 </html>
 EOT
