@@ -25,9 +25,11 @@ export const megaETH = defineChain({
   },
 });
 
+// Include both chains so `switchChain` works even if the user starts on the wrong network.
+// Order controls the default chain.
 const chains = process.env.NEXT_PUBLIC_CHAIN === "megaeth"
-  ? ([megaETH] as const)
-  : ([anvil] as const);
+  ? ([megaETH, anvil] as const)
+  : ([anvil, megaETH] as const);
 
 export const config = createConfig({
   chains,
