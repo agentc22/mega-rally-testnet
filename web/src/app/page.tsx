@@ -1,39 +1,19 @@
 "use client";
 
-import { useAccount, useChainId, useConnect, useDisconnect, useSwitchChain } from "wagmi";
+import { useAccount, useConnect, useDisconnect } from "wagmi";
 import { injected } from "wagmi/connectors";
 import { RoundView } from "./round-view";
-import { useEffect, useRef } from "react";
-import { ensureMegaethCarrotChain, MEGAETH_CARROT_CHAIN_ID } from "@/lib/megaeth-network";
 
 export default function Home() {
   const demo = process.env.NEXT_PUBLIC_DEMO === "1";
 
   const { address, isConnected } = useAccount();
-  const chainId = useChainId();
-  const { switchChainAsync } = useSwitchChain();
   const { connect } = useConnect();
   const { disconnect } = useDisconnect();
 
-  // Auto-switch to MegaETH carrot on wallet connect.
-  const didAttemptAutoSwitchRef = useRef(false);
-  useEffect(() => {
-    if (demo) return;
-    if (!isConnected) {
-      didAttemptAutoSwitchRef.current = false;
-      return;
-    }
-    if (didAttemptAutoSwitchRef.current) return;
-    didAttemptAutoSwitchRef.current = true;
-    if (chainId === MEGAETH_CARROT_CHAIN_ID) return;
-
-    void ensureMegaethCarrotChain({
-      currentChainId: chainId,
-      switchChainAsync,
-    }).catch(() => {
-      // ignore (user rejection, unsupported wallet, etc.)
-    });
-  }, [demo, isConnected, chainId, switchChainAsync]);
+  // Note: we intentionally do NOT auto-switch chains on connect.
+  // Some mobile wallets reload the page on switch requests, which can cause a refresh loop.
+  // Instead we show an explicit Switch to MegaETH Testnet button inside RoundView when on the wrong chain.
 
   const demoAddress = "0x000000000000000000000000000000000000bEEF" as const;
   const effectiveConnected = demo ? true : isConnected;
@@ -52,10 +32,7 @@ export default function Home() {
             {address?.slice(0, 6)}...{address?.slice(-4)}
           </button>
         ) : (
-          <button
-            className="connect-btn"
-            onClick={() => connect({ connector: injected() })}
-          >
+          <button className="connect-btn" onClick={() => connect({ connector: injected() })}>
             Connect
           </button>
         )}
