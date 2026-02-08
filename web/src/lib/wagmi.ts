@@ -1,4 +1,5 @@
 import { http, createConfig } from "wagmi";
+import { injected } from "wagmi/connectors";
 import { defineChain } from "viem";
 
 export const anvil = defineChain({
@@ -33,7 +34,9 @@ const chains = process.env.NEXT_PUBLIC_CHAIN === "megaeth"
 
 export const config = createConfig({
   chains,
-  transports: Object.fromEntries(
-    chains.map((c) => [c.id, http()])
-  ) as Record<number, ReturnType<typeof http>>,
+  connectors: [injected()],
+  transports: Object.fromEntries(chains.map((c) => [c.id, http()])) as Record<
+    number,
+    ReturnType<typeof http>
+  >,
 });

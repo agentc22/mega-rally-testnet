@@ -11,6 +11,7 @@ import {
 } from "wagmi";
 import { formatEther, parseEther, type Address } from "viem";
 import { MEGA_RALLY_ABI, MEGA_RALLY_ADDRESS } from "@/lib/contract";
+import { ensureMegaethCarrotChain, MEGAETH_CARROT_CHAIN_ID } from "@/lib/megaeth-network";
 import { FluffleDash, type DashFeedback } from "./fluffle-dash";
 
 interface LeaderboardEntry {
@@ -63,6 +64,8 @@ export function RoundView({ address, demo }: { address: Address; demo?: boolean 
   const chainId = useChainId();
   const { switchChainAsync } = useSwitchChain();
   const { writeContractAsync, isPending } = useWriteContract();
+
+  const onCorrectChain = isDemo || chainId === MEGAETH_CARROT_CHAIN_ID;
 
   // ---------------- Demo state ----------------
   const [demoJoined, setDemoJoined] = useState(false);
@@ -139,7 +142,7 @@ export function RoundView({ address, demo }: { address: Address; demo?: boolean 
     address: MEGA_RALLY_ADDRESS,
     abi: MEGA_RALLY_ABI,
     functionName: "nextRoundId",
-    query: { enabled: !isDemo },
+    query: { enabled: !isDemo && onCorrectChain },
   });
 
   useEffect(() => {
@@ -152,7 +155,7 @@ export function RoundView({ address, demo }: { address: Address; demo?: boolean 
     abi: MEGA_RALLY_ABI,
     functionName: "rounds",
     args: roundId !== null ? [roundId] : undefined,
-    query: { enabled: !isDemo && roundId !== null },
+    query: { enabled: !isDemo && onCorrectChain && roundId !== null },
   });
 
   const { data: hasJoined, refetch: refetchJoined } = useReadContract({
@@ -160,7 +163,7 @@ export function RoundView({ address, demo }: { address: Address; demo?: boolean 
     abi: MEGA_RALLY_ABI,
     functionName: "joined",
     args: roundId !== null ? [roundId, address] : undefined,
-    query: { enabled: !isDemo && roundId !== null },
+    query: { enabled: !isDemo && onCorrectChain && roundId !== null },
   });
 
   const { data: entryIndexOnchain, refetch: refetchEntryIndex } = useReadContract({
@@ -168,7 +171,7 @@ export function RoundView({ address, demo }: { address: Address; demo?: boolean 
     abi: MEGA_RALLY_ABI,
     functionName: "entryIndex",
     args: roundId !== null ? [roundId, address] : undefined,
-    query: { enabled: !isDemo && roundId !== null },
+    query: { enabled: !isDemo && onCorrectChain && roundId !== null },
   });
 
   const { data: attemptsUsedOnchain, refetch: refetchAttemptsUsed } = useReadContract({
@@ -176,7 +179,7 @@ export function RoundView({ address, demo }: { address: Address; demo?: boolean 
     abi: MEGA_RALLY_ABI,
     functionName: "attemptsUsed",
     args: roundId !== null ? [roundId, address] : undefined,
-    query: { enabled: !isDemo && roundId !== null },
+    query: { enabled: !isDemo && onCorrectChain && roundId !== null },
   });
 
   const { data: currentAttemptScoreOnchain, refetch: refetchAttemptScore } = useReadContract({
@@ -184,7 +187,7 @@ export function RoundView({ address, demo }: { address: Address; demo?: boolean 
     abi: MEGA_RALLY_ABI,
     functionName: "currentAttemptScore",
     args: roundId !== null ? [roundId, address] : undefined,
-    query: { enabled: !isDemo && roundId !== null },
+    query: { enabled: !isDemo && onCorrectChain && roundId !== null },
   });
 
   const { data: totalScoreOnchain, refetch: refetchTotalScore } = useReadContract({
@@ -192,7 +195,7 @@ export function RoundView({ address, demo }: { address: Address; demo?: boolean 
     abi: MEGA_RALLY_ABI,
     functionName: "totalScore",
     args: roundId !== null ? [roundId, address] : undefined,
-    query: { enabled: !isDemo && roundId !== null },
+    query: { enabled: !isDemo && onCorrectChain && roundId !== null },
   });
 
   const [creator, entryFee, startTime, endTime, pool, finalized, playerCount] =
@@ -257,6 +260,7 @@ export function RoundView({ address, demo }: { address: Address; demo?: boolean 
 
   const fetchLeaderboard = useCallback(async () => {
     if (isDemo) return;
+    if (!onCorrectChain) return;
     if (roundId === null || !publicClient) return;
     try {
       const players = await publicClient.readContract({
@@ -284,7 +288,7 @@ export function RoundView({ address, demo }: { address: Address; demo?: boolean 
     } catch {
       // ignore
     }
-  }, [roundId, publicClient, address, isDemo]);
+  }, [roundId, publicClient, address, isDemo, onCorrectChain]);
 
   useEffect(() => {
     fetchLeaderboard();
@@ -292,16 +296,17 @@ export function RoundView({ address, demo }: { address: Address; demo?: boolean 
 
   useEffect(() => {
     if (isDemo) return;
+    if (!onCorrectChain) return;
     if (!isActive) return;
     const iv = setInterval(fetchLeaderboard, 3000);
     return () => clearInterval(iv);
-  }, [isActive, fetchLeaderboard, isDemo]);
+  }, [isActive, fetchLeaderboard, isDemo, onCorrectChain]);
 
   useWatchContractEvent({
     address: MEGA_RALLY_ADDRESS,
     abi: MEGA_RALLY_ABI,
     eventName: "ActionsSubmitted",
-    enabled: !isDemo,
+    enabled: !isDemo && onCorrectChain,
     onLogs() {
       fetchLeaderboard();
       void refetchAttemptsUsed();
@@ -314,7 +319,7 @@ export function RoundView({ address, demo }: { address: Address; demo?: boolean 
     address: MEGA_RALLY_ADDRESS,
     abi: MEGA_RALLY_ABI,
     eventName: "EntryStarted",
-    enabled: !isDemo,
+    enabled: !isDemo && onCorrectChain,
     onLogs() {
       void refetchEntryIndex();
       void refetchAttemptsUsed();
@@ -327,7 +332,7 @@ export function RoundView({ address, demo }: { address: Address; demo?: boolean 
     address: MEGA_RALLY_ADDRESS,
     abi: MEGA_RALLY_ABI,
     eventName: "AttemptEnded",
-    enabled: !isDemo,
+    enabled: !isDemo && onCorrectChain,
     onLogs() {
       void refetchAttemptsUsed();
       void refetchAttemptScore();
@@ -660,27 +665,32 @@ export function RoundView({ address, demo }: { address: Address; demo?: boolean 
 
   const shortAddr = (a: string) => `${a.slice(0, 6)}...${a.slice(-4)}`;
 
-  const supportedChainIds = useMemo(() => [31337, 6343], []);
-  const isSupportedChain = supportedChainIds.includes(chainId);
+  const [switchingNetwork, setSwitchingNetwork] = useState(false);
+  const switchToMegaEthTestnet = useCallback(async () => {
+    setSwitchingNetwork(true);
+    try {
+      await ensureMegaethCarrotChain({
+        currentChainId: chainId,
+        switchChainAsync,
+      });
+    } catch {
+      // ignore (user rejection, unsupported wallet, etc.)
+    } finally {
+      setSwitchingNetwork(false);
+    }
+  }, [chainId, switchChainAsync]);
 
-  if (!isDemo && !isSupportedChain) {
+  // Hard gate: prevent any onchain actions unless we're on MegaETH testnet.
+  // This avoids accidental mainnet tx prompts.
+  if (!isDemo && chainId !== MEGAETH_CARROT_CHAIN_ID) {
     return (
       <div className="no-round">
-        <p>Wrong network. This app isn’t deployed on your current chain.</p>
-        <p style={{ opacity: 0.8, fontSize: 14 }}>
-          Switch to Anvil (local) for now. MegaETH support will be enabled once the chain is live and we deploy the contract.
+        <p style={{ marginBottom: 8 }}>Wrong network.</p>
+        <p style={{ opacity: 0.85, fontSize: 14, marginBottom: 12 }}>
+          Switch your wallet to <b>MegaETH Testnet</b> (chainId {MEGAETH_CARROT_CHAIN_ID}).
         </p>
-        <button
-          className="action-btn"
-          onClick={async () => {
-            try {
-              await switchChainAsync({ chainId: 31337 });
-            } catch {
-              // ignore
-            }
-          }}
-        >
-          Switch network
+        <button className="action-btn" onClick={switchToMegaEthTestnet} disabled={switchingNetwork}>
+          {switchingNetwork ? "Switching…" : "Switch to MegaETH Testnet"}
         </button>
       </div>
     );

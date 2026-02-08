@@ -1,7 +1,7 @@
 "use client";
 
 import { useAccount, useChainId, useConnect, useDisconnect, useSwitchChain } from "wagmi";
-import { injected } from "@wagmi/core";
+import { injected } from "wagmi/connectors";
 import { RoundView } from "./round-view";
 import { useEffect, useRef } from "react";
 import { ensureMegaethCarrotChain, MEGAETH_CARROT_CHAIN_ID } from "@/lib/megaeth-network";
