@@ -158,7 +158,7 @@ export function RoundView({ address, demo }: { address: Address; demo?: boolean 
     query: { enabled: !isDemo && onCorrectChain && roundId !== null },
   });
 
-  const { data: hasJoined, refetch: refetchJoined } = useReadContract({
+  const { data: hasJoined } = useReadContract({
     address: MEGA_RALLY_ADDRESS,
     abi: MEGA_RALLY_ABI,
     functionName: "joined",
@@ -207,7 +207,9 @@ export function RoundView({ address, demo }: { address: Address; demo?: boolean 
   const effectiveEntryFee = isDemo ? parseEther(demoEntryFee.toString()) : (entryFee ?? 0n);
   const effectivePool = isDemo ? parseEther(demoPool.toString()) : (pool ?? 0n);
   const effectivePlayerCount = isDemo ? BigInt(demoPlayers.length) : (playerCount ?? 0n);
-  const effectiveHasJoined = isDemo ? demoJoined : (hasJoined ?? false);
+  // "joined" was the old model. New retries model uses startEntry() and entryIndex(roundId, player).
+  // Treat entryIndex > 0 as joined.
+  const effectiveHasJoined = isDemo ? demoJoined : ((entryIndexOnchain ?? 0) > 0);
 
   const now = BigInt(Math.floor(Date.now() / 1000));
   const isActive = effectiveEndTime > 0n && now < effectiveEndTime && !effectiveFinalized;
@@ -599,9 +601,8 @@ export function RoundView({ address, demo }: { address: Address; demo?: boolean 
       // ignore; we'll still attempt to refetch (some wallets/rpcs can be flaky)
     }
 
-    await refetchJoined();
     await refetchRound();
-    void refetchEntryIndex();
+    await refetchEntryIndex();
 
     // optional: pre-open attempt so a crash before first commit can still be ended
     if (isActive) {
